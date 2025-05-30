@@ -54,7 +54,7 @@ jobs:
           # - x86
           - x86-alpha
         os:
-          - ubuntu-latest
+          - ubuntu-22.04
 
       fail-fast: false
 
