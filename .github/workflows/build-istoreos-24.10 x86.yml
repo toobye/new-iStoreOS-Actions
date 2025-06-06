@@ -26,7 +26,6 @@ on:
 
 env:
   REPO_URL: https://github.com/istoreos/istoreos
-  # REPO_BRANCH: main
   FEEDS_CONF: feeds.conf
   CONFIG_FILE: .config
   DIY_P1_SH: scripts/diy-part1.sh
@@ -44,18 +43,11 @@ jobs:
     strategy:
       matrix:
         REPO_BRANCH:
-          # - main
-          # - istoreos-22.03
-          # - istoreos-23.05
           - istoreos-24.10
         ARCHITECTURE:
-          # - rk33xx
-          # - rk35xx
-          # - x86
           - x86-alpha
         os:
           - ubuntu-22.04
-
       fail-fast: false
 
     steps:
@@ -76,15 +68,24 @@ jobs:
         echo -e "磁盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
         echo "------------------------------- 磁盘详情 -------------------------------\n"
         df -Th
-        
+
     - name: 安装 LLVM 和 Clang 12
       run: |
         sudo apt update
         sudo apt install -y llvm-12 clang-12
         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+        sudo ln -sf /usr/bin/clang-12 /usr/local/bin/clang
+        sudo ln -sf /usr/bin/clang++-12 /usr/local/bin/clang++
+        echo 'export CC=/usr/bin/clang-12' >> $GITHUB_ENV
+        echo 'export CXX=/usr/bin/clang++-12' >> $GITHUB_ENV
+        echo 'export PATH=/usr/bin:$PATH' >> $GITHUB_ENV
+
+    - name: 检查 Clang 版本
+      run: |
+        which clang
         clang --version
-    
+
     - name: 安装 Go 1.21.1
       uses: actions/setup-go@v5
       with:
@@ -93,7 +94,7 @@ jobs:
     - name: 初始化编译环境
       env:
         DEBIAN_FRONTEND: noninteractive
-        RUSTUP_HOME: /mnt/workdir/rustup  # 指定独立 Rust 目录
+        RUSTUP_HOME: /mnt/workdir/rustup
         CARGO_HOME: /mnt/workdir/cargo
       run: |
         echo "------------------------------- 更新并安装依赖 -------------------------------"
@@ -126,7 +127,7 @@ jobs:
       uses: klever1988/cachewrtbuild@main
       with:
         ccache: 'true'
-        mixkey: ${{ matrix.os }}-${{ matrix.ARCHITECTURE }}-${{ matrix.REPO_BRANCH }}-rustfix  # 增加标识
+        mixkey: ${{ matrix.os }}-${{ matrix.ARCHITECTURE }}-${{ matrix.REPO_BRANCH }}-rustfix
         prefix: ${{ github.workspace }}/openwrt
 
     - name: 加载自定义 feeds
@@ -158,8 +159,7 @@ jobs:
       run: |
         cd openwrt
         SET_IP=${{ github.event.inputs.lan_ip }}
-        #修改默认IP地址
-        sed -i "s/192\.168\.[0-9]*\.[0-9]*/$SET_IP/g" package/base-files/files/bin/config_generate
+        sed -i "s/192\\.168\\.[0-9]*\\.[0-9]*/$SET_IP/g" package/base-files/files/bin/config_generate
         echo "Set LAN IP Address: $SET_IP"
 
     - name: 设置系统名称
