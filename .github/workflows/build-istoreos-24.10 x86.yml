@@ -7,11 +7,11 @@ on:
       lan_ip:
         description: '设置LAN IP地址'
         required: true
-        default: '192.168.100.1'
+        default: '192.168.88.1'
       os_name:
         description: '设置系统名称'
         required: true
-        default: 'iStoreOS'
+        default: 'OpenWrt'
       enable_wifi:
         description: '启用WiFi'
         required: false
@@ -22,7 +22,7 @@ on:
         required: false
         default: 'false'
   schedule:
-   - cron: 0 16 * * *
+   - cron: 0 22 * * *
 
 env:
   REPO_URL: https://github.com/istoreos/istoreos
@@ -89,7 +89,9 @@ jobs:
         echo "------------------------------- 清理Docker镜像和软件 -------------------------------"
         docker rmi `docker images -q`
         docker image prune -a -f
-        sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* adoptopenjdk* mysql* php* mongodb* dotnet* moby* snapd* android* || true
+        # sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* adoptopenjdk* mysql* php* mongodb* dotnet* moby* snapd* android* || true
+        sudo -E apt-get install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pyelftools libpython3-dev qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libfuse-dev python3-setuptools g++ file clang nano genisoimage
+        pip install aligo
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
         echo "------------------------------- 设置工作目录及时区 -------------------------------"
@@ -97,25 +99,11 @@ jobs:
         sudo mkdir -p /mnt/workdir
         sudo chown $USER:$GROUPS /mnt/workdir
 
-    - name: 安装 LLVM 和 Clang 12
+    - name: 安装 LLVM 和 libatomic1 gcc
       run: |
         sudo apt update
-        sudo apt install -y llvm-12 clang-12
-        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100
-        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
-        sudo ln -sf /usr/bin/clang-12 /usr/local/bin/clang
-        sudo ln -sf /usr/bin/clang++-12 /usr/local/bin/clang++
-        echo 'export CC=/usr/bin/clang-12' >> $GITHUB_ENV
-        echo 'export CXX=/usr/bin/clang++-12' >> $GITHUB_ENV
+        sudo apt install -y llvm-12  libatomic1 gcc
         echo 'export PATH=/usr/bin:$PATH' >> $GITHUB_ENV
-
-    - name: 检查 Clang 版本
-      run: |
-        export PATH=/usr/bin:$PATH
-        export CC=/usr/bin/clang-12
-        export CXX=/usr/bin/clang++-12
-        which clang
-        clang --version
 
     - name: 安装 Go 1.21.1
       uses: actions/setup-go@v5
@@ -141,8 +129,6 @@ jobs:
         FEEDS_CONF_PATH: ${{ matrix.ARCHITECTURE }}/${{ env.FEEDS_CONF }}
       run: |
         export PATH=/usr/bin:$PATH
-        export CC=/usr/bin/clang-12
-        export CXX=/usr/bin/clang++-12
         [ -e $FEEDS_CONF_PATH ] && mv $FEEDS_CONF_PATH openwrt/$FEEDS_CONF
         chmod +x $DIY_P1_SH
         cd openwrt
@@ -151,15 +137,11 @@ jobs:
     - name: 更新 feeds
       run: |
         export PATH=/usr/bin:$PATH
-        export CC=/usr/bin/clang-12
-        export CXX=/usr/bin/clang++-12
         cd openwrt && ./scripts/feeds update -a
 
     - name: 安装 feeds
       run: |
         export PATH=/usr/bin:$PATH
-        export CC=/usr/bin/clang-12
-        export CXX=/usr/bin/clang++-12
         cd openwrt && ./scripts/feeds install -a
 
     - name: 加载自定义配置
@@ -167,8 +149,6 @@ jobs:
         CONFIG_FILE_PATH: ${{ matrix.ARCHITECTURE }}/${{ env.CONFIG_FILE }}
       run: |
         export PATH=/usr/bin:$PATH
-        export CC=/usr/bin/clang-12
-        export CXX=/usr/bin/clang++-12
         [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE_PATH ] && mv $CONFIG_FILE_PATH openwrt/$CONFIG_FILE
         chmod +x $DIY_P2_SH
@@ -206,8 +186,6 @@ jobs:
       id: package
       run: |
         export PATH=/usr/bin:$PATH
-        export CC=/usr/bin/clang-12
-        export CXX=/usr/bin/clang++-12
         cd openwrt
         make defconfig
         make download -j8
@@ -218,8 +196,6 @@ jobs:
       id: compile
       run: |
         export PATH=/usr/bin:$PATH
-        export CC=/usr/bin/clang-12
-        export CXX=/usr/bin/clang++-12
         cd openwrt
         echo -e "$(nproc) thread compile"
         make -j$(nproc) || make -j1 || make -j1 V=s
@@ -268,7 +244,7 @@ jobs:
 
         ⏱️ 编译时间: $(date +"%Y年%m月%d日%H时%M分")
 
-        🌐 管理地址: 192.168.100.1
+        🌐 管理地址: 192.168.88.1
 
         👤 用户名: root
 
