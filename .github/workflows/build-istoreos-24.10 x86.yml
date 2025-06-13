@@ -65,7 +65,6 @@ jobs:
         sudo docker system prune -af || true
         sudo apt-get clean
         sudo rm -rf /tmp/*
-        sudo rm -rf /mnt/*
         df -hT
 
     - name: 检查服务器配置
